@@ -1,7 +1,74 @@
-우분투 관련
+유닉스와 리눅스 >> 둘 다 OS
+	: Unix >>  apple 과 같은 대기업에서 선호하는 유료 OS.
+	: Linux >>  누구나 사용하기 쉬운 오픈소스 무료 OS. 
+		: Unix 에서 파생된 운영체제이다.
+		: 리눅스라는 용어는 리눅스 커널만을 뜻하지만, 리눅스 커널과 GNU 프로젝트의 라이브러리와 도구들이 포함된, 전체 운영체제를 나타내는 말로 흔히 쓰임
+
+
+GNU 프로젝트. 운영체제 : 상업용이 아닌 누구나 사용할 수 있는 free software 를 만들자는 취지의 OS .
+	: GNU 의 약자는 GNU is Not Unix. 즉,  unix 코드 를 포함하지 않는다는 말. ( unix 코드를 쓰지 않을 뿐 다른 방법으로 unix 의 "기능"을 구현해놨다. ) 즉, unix 와 별개로 완전 새롭게 만든 것. 
+	: unix 를 대체하기 위한 용도. ( 얘도 운영체제이다 )
+
+
+GNU 와 Linux : 
+	: 일단 GNU 프로젝트가 먼저 시작함. GNU 프로젝트에서 커널이 좀 별로였는데, 좀 지나서 등장한 GNU 운영체제에 적합한 커널이 Linux . 이후 GNU OS는 Linux 를 커널로 채택함.
+	: 사실 리눅스란 용어 자체는 리눅스 "커널"만을 의미하고, 리눅스 커널을 활용하는 윤영체제가 GNU 임. 우리가 리눅스라고 흔히 부르는건 GNU/LINUX 임.
+
+
+
+데비안과 우분투 >> 리눅스 배포판
+	: 우분투는 데비안을 기반으로 한 배포판.
+
+
+리눅스 명령어 관련
 	sudo >>SUperuser DO. 현재 사용자 권한이 어케됬건 root 권한으로 (sudo 뒤의) 명령어를 실행시킨다.
+
+	| >> 파이프. 파이프의 앞 명령어에서 나온 결괏값을 파이프의 다음 명령어에 넣어준다. 
+	- >> 이름이 한글자인 옵션
+	-- >> 이름이 두글자 이상인 옵션
+	$( 변수값 ) >> 명령어 치환 Command Substitution: 값을 명령어의 해당 부분에 동적으로 삽입해준다
+
+
+
+	systemctl >> SYSTEMD + ConTroL. systemd 프로세스를 활용하여 프로그램을 제어하는 명령어.
+		systemd >> 전반적인 시스템, 서비스를 관리하기 위한 프로세스.
+			: systemd의 PID 는 1 이다. 그러니까 ㅈㄴ 중요한 프로세스란 의미. 
+
+ 
+	usermod >> USER MODify. 사용자의 속성을 수정한다.
+		: 사용자의 그룹, 홈디렉토리 등을 변경할 수 있다
+		: 옵션
+			-a : Append. 새로운 그룹을 추가할 때 사용
+				; 이거 없이 다른 그룹에 걍 넣어버림 해당 사용자가 기존에 속했던 그룹에서 빠져버리게 되는거임 주의
+			-G : Group. (뒤에 명시하는) 그룹에 사용자를 추가.
+
+
+
+
 	apt >>Advanced Package Tool. 우분투에서 쓰이는 데비안 계열의 패키지를 관리하는데 쓰이는 도구
-		: 응용프로그램 설치 삭제 업데이트 등의 작업을 하는데 사용된다
+		: apt 에서의 "repository(저장소)" == 다운로드할 패키지가 있는 서버.
+			: repository 자체가 다운로드할 패키지인게 아니다. 다운로드받을 패키지(들)가 있는 위치인거다. 
+		: apt 패키지 설치하면, 기본적으로 있는 디렉터리인 /etc 아래 /apt 디렉터리가 생성됨
+			: 응용프로그램 설치 삭제 업데이트 등의 작업을 하는데 사용된다
+			: 주요 파일
+			     : tip >> XXXX.d 형식은 파일이 아니라 디렉터리를 의미한다. 그리고 해당 디렉터리 는 .d 앞의  XXXX이름을 가지는 파일의 역할을 똑같이 수행하는데, 그걸 모듈화시켜서 할 수 있게 해준다
+				(1) /etc/apt/sources.list :  리포지토리의 목록
+					: deb [옵션1 옵션2 .. ] <리포지토리 URL> <배포명> <섹션> 의 형식으로 저장된다
+						: [옵션] 부분에는 실제로 "[ ]" 를 써야된다.
+							: 내부에는 다운로드 받을 해당 패키지(<리파지토리URL>로 다운받아지는패키지 )의 architecture 를 지정할 수 있고, 서명 검증하는데 쓰일 키를 지정할 수 있다. 
+					: 주의 >> 여기에 추가한다고 해서 알아서 해당 패키지가 다운받아지는게 아니다. 패키지의 설치를 위해선 직접 "apt install 패키지명" 해줘야된다. 그럼에도 굳이 sources.list 에 정리해두는건 설치되는 패키지의 종속성관리 및 업데이트를 쉽게 하기 위해서, 보안을 위해서이다.
+						: 다운받을 때 특정 gpg 키를 지정하여 검사한 후 다운받게 할 수 있다.
+				(2) /etc/apt/sources.list.d/ :  추가적인 리포지토리 목록을 저장
+					: 모듈화 하여 관리하기에 용이하다. /etc/apt/sources.list 파일에 죄다 나열하는 대신, /etc/apt/sources.list.d 안에 docker.list, google-chrome.list 와 같이 개별 파일로 나누어 저장할 수 있다
+					: sources.list 와 동일한 수준.계층에 있다. (source.list 가 sources.list.d 내부에 있거나 그런게 아니란 말)
+					
+				(3) /etc/apt/apt.conf : APT의 전역 설정 파일
+
+		: apt 명령어 vs apt-get 명령어
+			:  내부동작의 큰 차이는 없고 둘 다 패키지를 install 할 때 쓰임
+			: apt 명령어는 대체로 apt-get 기능을 다 커버하고, 성능도 더 좋은데, 가끔 apt-get 만 사용해야되는 경우도 있다. 이 경우만 apt-get 쓰면 되고 나머지는 다 apt 써라  
+
+	dpkg >> Debian Package .  apt 와 마찬가지로 패키지 설치를 위해 사용되는데 의존성 문제가 있다. 이러한 문제를 해결한 것이 apt 이고 apt 를 더 많이 쓴다.
 
 
 
@@ -72,6 +139,8 @@ SSL Secure Sockets Layer 보안 소켓 계층, TLS  Transport Layer Security >> 
 	: SSL 이 업데이트 한게 TLS  이다. SSL은 현재 사용 중인 TLS 암호화의 전신
 	: SSL/TLS를 사용하는 웹사이트는 "HTTP" 대신 "HTTPS" 쓴다.
 
+
+
 SSL 인증서 >> 서버의 신원을 증명하는 신분증
 	: SSL/TLS 인증서 가 있는 웹사이트에서만 SSL 프로토콜의 사용이 가능하다.
 	: 그러니까 클라이언트가 올바른 서버와 통신하고 있는지 확인하는 용도의 파일. 중간에 요청 뺐어서 제3의 서버로 요청을 보내게 하는 DNS 스푸핑 같은걸 막는다.
@@ -131,7 +200,7 @@ CA >>  SSL 보안 인증서를 발급 및 인증하는 기관"들"
 				: public key , private key 개념에서 public 과 private 의 기준은 복호화 역할이냐 암호화 역할이냐 따라 정해지는게 아니라 공개냐 비공개냐에 따라 결정되는거다. 그리고 둘 중 한쪽은 무조건 암호화, 다른 쪽은 무조건 복호화 역할을 수행해야된다
 
 			step3. 클라이언트는 복호화한 signature 부분의 내용과 인증서에 기재된 public key 부분이 일치하는지 확인한다. 일치하면 검증된거다.
-				; 앞서 인증서 발급할 때 signature 부분에 해당 회사의 public key 를 해싱한 거라서 그런거다
+				: 앞서 인증서 발급할 때 signature 부분에 해당 회사의 public key 를 해싱한 거라서 그런거다
 
 
 		4. 인증서를 검증에 성공시 클라이언트는 해당 서버를 신뢰할 수 있는 서버로 간주한다
@@ -144,31 +213,130 @@ TSL 의 handshake >> 실제 데이터를 주고 받기 전, 서버와 클라이�
 
 
 
+
+plugin >> 확장프로그램. 추가기능. 
+	: 해당 프로그램에 특정 기능을 추가하기 위해 추가하게되는 확장 도구 같은거.. 
+	: 웹 브라우저 뿐 아니라 IDE 등에서도 다양하게 활용된다.
+
 ---------------------------------------------------------------------------------------------------------------
 
 --도커 설치하기--
 
 
-사전준비
-	1. 도커 리포지토리 와 통신할 수 있는 환경 설정
-		:  도커 리포지토리 >> 도커를 설치하기 위해 필요
-		step1.  apt 패키지 인덱스를 업데이트 >>sudo apt-get update
-		step2.  apt가 HTTPS에서 리파지토리를 사용할 수 있게 하는데 필요한 패키지를 설치 >>sudo apt-get install ca-certificates curl gnupg lsb-release
-			: ca-certificates >> CA 목록 패키지
+사전 셋팅 >> 도커 리포지토리 와 통신할 수 있는 환경 설정
+	 :  도커 리포지토리 >> 도커패키지가 저장된 서버.
+	1.  apt 패키지 인덱스를 업데이트 >>sudo apt-get update
+	2,  apt가 HTTPS에서 리파지토리를 사용할 수 있게 하는데 필요한 패키지를 설치 >>sudo apt-get install ca-certificates curl gnupg lsb-release
+		: install 뒤에 쭉 나열된건 다운로드 받을 패키지 목록을 띄어쓰기로 구분해둔것.ㄴ
+		: ca-certificates >> CA 목록 패키지
 
-			: curl >>  Client URL. 클라이언트에서 url 을 사용해서 서버와 데이터를 송수신 하는걸 가능하게하는 명령어 툴.
-				: 다양한 프로토콜(HTTP , HTTPS , TELNET , .. )을 지원함.
-				: url 을 사용한다는게 꼭 get 방식 처럼 직접 url 뒤에 보낼 데이터를 담는 방식을 의미하는게 아니다. 그냥 방식이 어찌됬건 url 을 활용하는걸 의미하는거다
-					ex ) post 명령어 >> curl -X POST -F "file=@localfile.txt" https://example.com/upload
-				: 어찌됬건 여기서는 파일 다운로드 받기 위해 설치한다
+		: curl >>  Client URL. 클라이언트에서 url 을 사용해서 서버와 데이터를 송수신 하는걸 가능하게하는 명령어 툴.
+			: 다양한 프로토콜(HTTP , HTTPS , TELNET , .. )을 지원함.
+			: url 을 사용한다는게 꼭 get 방식 처럼 직접 url 뒤에 보낼 데이터를 담는 방식을 의미하는게 아니다. 그냥 방식이 어찌됬건 url 을 활용하는걸 의미하는거다
+				ex ) post 명령어 >> curl -X POST -F "file=@localfile.txt" https://example.com/upload
+			: 어찌됬건 여기서는 파일 다운로드 받기 위해 설치한다
 
-			: gnupg >> GNU Privacy Guard :  암호화 기술인 PGP를 기반으로 만들어진 암호화 소프트웨어.				
-				: 디지털 서명을 사용하기 위해  설치
+		: gnupg >> GNU Privacy Guard :  데이터를 암호화/복호화하고 디지털 서명을 생성 및 검증하기 위한 도구
+			: PGP Pretty Good Privacy 를 기반으로 만들어졌다.
+			: ex ) 오픈소스 소프트웨어 개발자는 public GPG 키로 소프트웨어 패키지에 서명하고(= public key 를 패키지에 첨부하고 암호화), 사용자는 private GPG 키를 사용하여 다운로드한 소프트웨어가 (변질되지 않은) 원본임을 알 수 있다(= private GPG 키로 복호화 하여 public key 가 똑같이 나오는지 확인).
+			: 이 패키지는 설치 이후 "gpg"라는 명령어를 통해 사용 가능하다 
+			: 옵션
+			    (1) 암호화 및 복호화
+				--encrypt 
+				--decrypt 
 
-			: lsb-release >>Linux Standard Base release. 리눅스 배포판(우분투)의 버전을 확인할 수 있게 해준다. 
+			    (2) 디지털 서명 및 검증 
+				--sign 
+				--verify  
+
+			    (3) 공개/비밀 키를 생성 및 관리
+				--gen-key : 새 키 생성
+				--list-keys : public key 확인 
+				--list-secret-keys : secret key 확인 
+				--import 파일경로 : 해당파일에서 키를 가져옴
+					: 보통 이러한 파일은 .asc 확장자
+
+			    (4) ASCII 형식의 GPG키 <--> 바이너리 형식의 GPG키 변환
+				: dermored 와 amored 	>> pgp 와 gpg 상에서 데이터를 각각 binary,ascii 형식으로 인코딩하는 걸 의미.	 
+				--dearmor :  ASCII 형식 --> 바이너리 형식으로 변환
+				--armor :  바이너리 형식 --> ASCII 바이너리 형식으로 변환
 
 
-	2. 도커 공식 GPG 키 추가
-		: GPG >> GNU Privacy Guard . 도커 이미지 인증을 확인할 때 사용한느 키.
 
-식별자
+			: https://jykim74.tistory.com/129
+			: https://uyfuyfuy-042.tistory.com/entry/GPG-keyPGP
+
+
+
+		: lsb-release >>Linux Standard Base release. 리눅스 배포판(우분투)의 버전을 확인할 수 있게 해준다. 
+
+
+	3. 도커 공식 GPG 키 추가 >> curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+		: -fsSL >> curl 명령어의 옵션 여러개 쓴거다.
+			: f , s , S >> 출력 관련 옵션
+			: L >> 리디렉션을 따라가게 하는 옵션
+
+		: "https://download.docker.com/linux/ubuntu/gpg"  >> 도커 GPG 키를 다운로드 받을 수 있는 URL. 
+			: public key 가 다운로드 된다
+
+		: | >> 파이프. 앞 명령어 결과를 뒷 명령어의 입력으로 넣어준다.
+		: gpg >> gnupg 패키지 사용하기 위한 명령어
+		: 굳이 --dearmor  를 써서 키를 바이너리 형식으로 저장하는 이유 
+			1. 일부 패키지(ex - apt )는 바이너리 형식의 데이터 처리만 가능하기 때문. 
+			2. 컴퓨터가 더 효율적으로 처리할 수 있으니까
+				: ASCII 는 사람이 읽기 쉽도록 인코딩해둔것
+
+
+	4. docker.list( 도커 리파지토리)를 APT의 sources.list.d 에 추가 >> echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+		: 이 과정을 통해 도커 패키지 설치 및 업뎃 할 때 APT 가 해당 저장소를 참조할 수 있게 됨
+		: echo >> 해당 명령어 뒤의 문자열을 (명령어로써) 실행. 출력
+			: 가독성 향상의 목적이라고 한다.
+		: deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable >>그러니까 apt가 https://download.docker.com/linux/ubuntu 경로의 패키지를 다운받을건데, 현재 시스템의 아키텍처(예: amd64)에 맞는 패키지를 택해 다운로드하게 하고, 그 패키지에 대한 검증을 할 때 앞서 저장해둔 public key 인 /etc/apt/keyrings/docker.gpg 로 진행하게 한다.
+		: tee >>  명령어의 출력 결과를 파일과 화면에 동시에 출력하게 한다
+			: T 자 모양으로 출력한다해서 붙여진 이름.
+
+		: /dev/null >>  특수한 파일
+			: 여기로 출력하면 해당 데이터는 걍 버려진다. 출력 결과를 버리고 싶은 경우 유용하다
+				ex ) echo "Hello, World!" > /dev/null : 화면엔 암것도 출력안됨
+
+			: 여기로 읽기하면 EOF 를 반환한다. 
+				ex ) command < /dev/null : 빈 입력 제공
+
+
+
+
+
+도커 설치
+	1. apt 패키지 업데이트  >> sudo apt-get update
+		: 본격적 도커 설치 전 설치된 패키지들을 최신상태로 업데이트 한다.
+		: 이 과정에서 error 나면서 ... does not have a release file 이따구로 나오는건 앞서 기초 세팅 과정의 3, 4 명령어를 이상하게 입력해서 난 에러이다. 앞서 설치한 파일들 모두 삭제( 각각 /etc/apt 의 하위 디렉터리에서 찾아서 rm )하고 3, 4 으로 다시 다운로드 해라.
+
+	2. 도커와 관련한 여러 패키지 설치 >> sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+		: install 이라는 서브 명령어 뒤에 나열된 건 설치할 패키지들.
+			docker-ce >> Docker Community Edition 패키지
+			docker-ce-cli >> Docker Commutnity Edition 의 CLI 도구.
+			containerd.io >> 컨테이너 런타임 도구. 
+				: 컨테이너의 수명 주기를 관리. 컨테이너 이미지를 풀링, 저장소 관리, 네트워킹을 처리
+			docker-buildx-plugin >> 빌드관련 플러그인(확장프로그램) 
+				; 멀티 플랫폼 이미지를 빌드하는 데 유용.
+				: 도커 이미지를 빌드하는 새로운 기능과 명령어를 제공
+			docker-compose-plugin >> Docker compose 라는 플러그인.
+				: Docker Compose >> YAML YAML Ain't Markup Language 를 사용하여 멀티 컨테이너 도커 애플리케이션을 정의 및 실행할 수 있게 함. ( 그러니까 컨테이너 여러개일 때 관리하기 쉽게 해주는 얘라는 거임)
+
+	3. 제대로 설치되었는지 확인 >> systemctl status docker
+		: 초록글씨 나오면서 active 써있으면 성공한 것.
+
+
+	4. 도커 명령어를 관리자(root) 뿐 아니라 사용자도 사용할 수 있게 하기 : 귀찮으니까 >> sudo usermod -aG docker $USER
+		: 리눅스에서 "$USER" 변수는 현재 사용자의 이름을 나타낸다 
+			: 예제의 경우 eevee 이다.
+		: 사용자를 docker 그룹에 추가한다.
+
+	5. 재로그인 >> logout 후 다시 로그인
+		: 수정된 내용을 반영하기 위해선 재로그인 필요
+
+	6. 최종 테스트 >> docker run hello-world
+		: python 이나 java 의 hello world 급의 명령어이다.
+
+
+
