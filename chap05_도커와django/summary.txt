@@ -1,0 +1,106 @@
+도커를 활용한 django 실행
+	: pyenv 를 활용한 파이썬 가상환경 구축
+	: YAML 파일 개념
+	: docker compose 를 활용해 웹 서비스를 실행
+
+---------------------------------------------------------------------------------------------------------
+
+noble, focal 같은거 >> 우분투 버전
+	: 나는 noble ( 24.04 LTS )
+
+apt 와 repository
+	: https://jjeongil.tistory.com/1682	
+	: https://www.todayhumor.co.kr/board/view.php?table=computer&no=92067 << 3번째 댓글
+	: apt Advanced Packaging Tool >> 패키지 관리(설치, 업데이트,제거) 툴
+		: apt 가 설치 및 업데이트를 할 때, "repository" 에서 해당 패키지를 가져오게 된다. 
+
+	: apt repository >> apt 로 설치당하는 패키지가 저장되있는 저장소.
+		: ubuntu 기본 리파지토리 >> 4가지 컴포넌트(구성요소) 로 이루어짐
+		    : basic 하다는점에서 "기본"인거지, 배포될 때부터 깔려있다는게 아님 주의
+			1. main
+			2. restricted 
+			3. multiverse
+			4. universe
+
+		: /etc/apt/sources.list.d 의 ubuntu.sources (이전엔 sources.list . 형식은 같다 ) 에 repository가 정의되어진다
+			: 정의 형식  >> [ deb || deb-src ] [ 리파지토리URL ] [우분투버전] 컴포넌트명
+			    : deb >> (사전 컴파일된) 바이너리형식의 리포지토리 패키지. 일반적으로 사용.
+			    : deb-src >> (원본) 소스코드형식의 리포지토리 패키지
+			    : 컴포넌트 여러개 나열 가능(띄어쓰기로 구분하는거지 콤마는 안쓰는거 주의)
+
+			   
+
+			    : ex ) 
+				: deb http://archive.ubuntu.com/ubuntu noble main restricted multiverse universe
+			    	: deb http://archive.ubuntu.com/ubuntu noble-update main restricted multiverse universe << 구글링했을때 이거 한 글은 못봤는데 GPT는 (기본저장소 추가 후) 업데이트 저장소까지 추가하더라. 
+
+
+	: ubuntu 에 repository 를 추가하는 법
+	    : repository 를 추가한다 == apt 가 패키지를 가져올 수 있는 repository의 URL을 추가한다 
+		sol1. add-apt-repository 명령어 사용
+		    : add-apt-repository >>apt repository 설정을 쉽게 할 수 있데 해주는 툴
+			:  sources.list 을 직접 편집하지 않아도 되게 해준다.
+			: 이 패키지의 사용을 위해선 software-properties-common 패키지가 먼저 설치되어있어야됨
+				: sudo apt-get install software-properties-common
+			: 사용법 >> sudo add-apt-repository "sources.list에서의리파지토리정의형식" 
+
+		sol2. 텍스트 편집기 사용 >> 직접 "[ deb || deb-src ] [ 리파지토리URL ] [우분투버전] 컴포넌트명" 입력
+
+
+
+
+
+
+
+실습에서 E: unable to locate package 에러( apt-get install make build-essential 같은게 계속 안됬던) 원인 >> repository 에 대한 설정 부족
+	: 씨발 교재에선 이에 대한 언급이 일절 없었음 
+	: ubuntu 는 apt를 통해 패키지를 관리하는데, 그러한 패키지들은 repository 라는 곳에 저장되어있고, apt는 sources.list 에 기록된 repository 목록을 참조하여 패키지를 찾게 되어있다. 근데 make, build-essential 과 같은 패키지가 저장되어있는 repsotiory를 호스트의 sources.list 에 저장해두지 않아, apt 가 해당 패키지를 설치 가능한 저장소를 찾지 못해 발생한 문제였다.
+	: 해당 에러가 발생된 원인 후보들 >> https://velog.io/@duboo/E-unable-to-locate-package-%EC%97%90%EB%9F%AC%EB%A5%BC-%ED%95%B4%EA%B2%B0%ED%95%98%EB%8A%94-%EB%8B%A4%EC%96%91%ED%95%9C-%EB%B0%A9%EB%B2%95 
+	: 원인들 중 저장소 원인 해결방법 >> https://jjeongil.tistory.com/1682
+
+
+
+실습을 위한 패키지 및 라이브러리
+	: django >> 라이브러리
+	: pyenv >> 파이썬 버전 관리 도구
+		: 여러 버전의 python 을 설치하고 사용할 수 있게 도와준다
+
+	: tree >> 디렉터리 구조 파악용 패키지
+	: curl 과 wget >> 웹 서버로부터 컨텐츠를 가져오는 패키지
+		: 둘 다 기능이 고만고만한데 curl 이 좀 더 최근거임.
+		: 빠르긴 wget 이 더 빠른데 curl 이 좀더 복잡한 다운로드를 지원
+
+
+pyenv 설치하기
+	step1. 본격 pyenv 설치 이전에 먼저 설치해야할것 >> sudo apt-get update; sudo apt-get install make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+		: 수행하는데 E: unable to locate package 에러 나면 >> repository 에 대한 설정이 제대로 안되어있는것.
+			: 리파지토리 정의 하기 >> add-apt-repository "deb http://archive.ubuntu.com/ubuntu noble main restricted multiverse universe" 
+				: 완료되면 /etc/apt/sources.list 에 해당 리파지토리들에 대한 위치가 잡혀서, 해당 리파지토리에 저장된 패키지들을 호스트의 apt 가 잘 인식할 수 있게 된다
+
+
+	step2. 본격 pyenv 설치 >> curl https://pyenv.run | bash 
+		: 앞서 설치한 curl 패키지를 사용하여 request 하여 스크립트를 다운받고, 다운로드한 스크립트를 bash 셸에서 실행한다. 
+			: pyenv 가 스크립트란 말이 아니라, pyenv 를 설치 및 설정하는 과정에서 스크립트가 다운로드 되고 사용된다는 거임
+				: 스크립트 >>  프로그램이나 명령어의 집합. 특정 작업을 자동화하거나 일련의 명령어를 순차적으로 실행하기 위해 작성된 텍스트 파일.
+
+
+
+	
+	step3. 추가 환경 설정 >> 
+		step(1) 홈 디렉터리에서 파일 목록 확인>>  ls -al 
+			: 숨김 파일인 .bashrc 파일 확인 가능
+
+		step(2) vim .bashrc 로 .bashrc 파일의 젤 끝에 다음 4줄 추가
+			export PYENV_ROOT="$HOME/.pyenv"
+			command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+			eval "$(pyenv init -)"
+			eval "$(pyenv virtualenv-init -)"
+
+		step(3) 셸 재시작 >> exec $SHELL
+
+
+
+	step4. 제대로 설치되었는지 확인 >> pyenv -v
+
+
+
