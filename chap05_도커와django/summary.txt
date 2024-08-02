@@ -82,6 +82,16 @@ apt 와 repository
 	
 
 
+tip 
+	1. 이미지를 생성한다 == 이미지를 빌드한다
+	2. 컨테이너를 배포한다 == 기타 설정 및 컨테이너 생성
+	3. 어떤 프로그램을 foreground 로 실행한다 == 어떤 프로그램을 프로세스로 실행한다
+		: foreground VS background
+			daemon (=background) >> 백그라운드에서 실행하고, 제어를 셸로 즉시 반환한다.
+			foregroud >> 프로세스를 앞단에서 실행하고, 프로세스가 종료될 때까지 제어를 유지한다
+
+
+
 
 실습을 위한 패키지 및 라이브러리
 	: pyenv >> 파이썬 버전 관리 도구
@@ -385,6 +395,21 @@ django 실행을 위한 네트워크 설정
 
 						4. CMD 혹은 ENTRYPOINT >> 생성된 이미지로부터 컨테이너를 생성할 경우, 최초 실행될 리눅스 명령어를 지정
 							: CMD 는 컨테이너 생성 당시 명령어를 직접 지정할 경우 변경 가능하게 한 것이고, ENTRYPOINT 는 변경 불가능하게 한 것.
+							: 할당가능한 값
+								실행 파일 형식 값 >> 명령어를 JSON 배열로 작성.  ( [ "명령어", "옵션", "인자1", "인자2" ] 꼴로 입력하는거지, 마냥 띄어쓰기를 기준으로 하는게 아님 주의)  
+									: 명령어가 셸을 거치지 않고 직접 실행되어, 명령어가 그대로 실행됨
+									: "/bin/sh", "-c" 를 앞에 요소로 추가하면 셸 형식 값과 같은 효과를 낼 수 있음
+									: ex ) CMD ["echo", "*"] == 실제로 "echo *"로 실행됨. ( 즉, 걍 '*' 이 출력됨) 
+
+
+								셸 형식 값 >> [ ] 없이 단순 문자열로 입력  
+									: 해당 명령어는 셸( '/bin/sh -c' )을 통해 실행되어, 셸의 기능을 사용 가능
+									: ex ) CMD echo * == 실제로는 "/bin/sh -c 'echo *' "로 실행됨. (즉, 현재 디렉터리에 있는 모든 파일의 이름이 출력됨)
+
+									
+
+
+
 
 
 						5. EXPOSE >> 생성된 이미지로부터 컨테이너를 생성할 경우, 노출시킬 포트를 설정
@@ -438,7 +463,8 @@ django 실행을 위한 네트워크 설정
 
 
 
-		 : django 컨테이너 실행(생성) >> 생성한 django 이미지로 컨테이너 실행
+		 : django 컨테이너 생성. 배포 >> 생성한 django 이미지로 컨테이너 실행
+			: 컨테이너 배포 == 컨테이너 생성 및 기타 설정 
 			: 걍 일반적인 이미지로 컨테이너 생성했던거랑 비슷하게 함 됨. 근데 이제 포트 포워딩을 곁들인.. 
 			: 포트포워딩 하여 이미지를 컨테이너로 실행하기 >> run 할 때 옵션으로 -p [도커호스트포트]:[컨테이너포트] 를 추가적으로 줌 됨
 				: 실습에서는 >>  docker container run -d -p 8000:8000 myweb01
@@ -447,11 +473,83 @@ django 실행을 위한 네트워크 설정
 						8000:8000 >> 호스트의 8000 번 트래픽을 이 컨테이너의 8000 번 으로 보내겠다. 
 
 
-
-
 		 : Nginx, django 연동 후 실행 >> 	
 			: Nginx 컨테이너를 실행 후 gunicorn 을 활용해 Nginx 와 django 를 연동
-			: 
+			: Nginx >> 가볍고 성능 좋은 web server. 
+				: https://phsun102.tistory.com/45
+				: 정적 파일들을 처리하기 위해 사용
+				: Reverse Proxy Server 로 활용됨
+					: 80 번 포트로 들어오는 내용을 3000, 4000 .. .등의 다른 포트로 분산시키기 가능
+				: 비동기 이벤트 구조를 기반으로 동작 (Event-Driven)
+					: 이에 반해 Apache 는 쓰레드/프로세스 기반
+
+				: 핵심 파일
+					: 설정 파일 >> nginx.conf , default.conf
+						: nginx.conf >> nginx 의 기본 설정 파일 
+							: 다음의 내용이 정의됨 
+								error_log >>  nginx의 에러로그가 쌓이는 경로
+								pid  >>  nginx의 프로세스 아이디 (pid)가 저장되는 경로
+								worker_connections  >>   Worker Process가 동시에 처리할 수 있는 접속자의 수를 나타낸다. 기본은 1024.
+								include >> 어떤 파일을 포함시킬것인지.
+									  include      /etc/nginx/conf.d/*.conf; >> /etc/nginx/conf.d에 .conf로 끝나는 파일들을 포함시켜 가져오겠다
+								default_type >> 웹서버의 기본 Content-Type
+								log_format >> 로그 형식을 지정
+								access_log >>  접속 로그가 쌓이는 경로
+								keepalive_timeout >> 클라이언트에서 연결이 유지될 시간을 정의
+						: default.conf >>  nginx.conf를 통해 include된 서버 설정관련 파일. 
+							: default2.conf, default3.conf 등 여러 개의 파일을 추가하여 서버관련 설정을 추가로 만들어 포함시킬 수 있다.
+							: 다음의 내용이 정의됨 
+								listen >> 해당 포트로 들어오는 요청을 해당 server {} 블록의 내용에 맞게 처리하겠다
+								server_name >> 호스트 이름을 지정
+								error_page >> 요청결과의 http 상태코드가 지정된 http 상태코드와 일치할 경우, 해당 url로 이동
+
+								location /  >> path 가 루트일 때 보여줄 페이지(index)를 지정
+
+
+
+			: gunicorn Green Unicorn>> WSGI 중 하나로, python 웹 어플리케이션의 높은 트래픽을 쉽게 처리할 수 있는 가볍고 안정적인 서버
+				: Django, Flask 등등의 파이썬 웹프레임워크랑 같이 사용되는 기술
+				: WSGI WebSever Gateway Interface >> 파이썬 애플리케이션이 웹서버와 통신하기 위한 인터페이스
+					: 대표적으로 gunicorn 과 uWSGI 가 있다
+					: 왜 쓰는가? >> Django 나 Flask 자체적인 웹 서버는 보안/성능적으로 좋지 않아 배포에는 적합하지 않아 배포 시에는 따로 서버를 구현하고, 이를 gunicorn 으로 연결해 사용하게 됨
+
+				: https://velog.io/@ggydo59/gnuicorn-gunicorn%EC%9D%B4%EB%9E%80-%EC%99%9C-%ED%95%84%EC%9A%94%ED%95%A0%EA%B9%8C
+
+			: Nginx 컨테이너 배포(=설정 및 생성) 절차 
+				(1) 디렉터리 정리 >> Nginx 전용 디렉터리를 새로 생성 
+					: mkdir ex04
+				(2) Dockerfile 파일 생성 및 작성 >> 
+					: 실습에서는 
+						FROM nginx:1.25.3
+						CMD ["nginx", "-g", "daemon off;"]
+					  와 같이 정의
+
+					: 컨테이너를 활용해 Nginx 를 실행할 때는 daemon off 옵션을 명시해 foreground 로 실행해줘야된다.
+					    : 왜 ? >> 아무런 옵션을 명시하지 않으면 Nginx 는 데몬 모드로 실행되고, 주 프로세스가 백그라운드로 전환되면서 Docker 컨테이너의 주 프로세스가 종료된 것으로 간주되어 해당 컨테이너가 즉시 종료된다.
+						: Docker 컨테이너는 일반적으로 하나의 주 프로세스(main process)를 실행하기 위해 설계되었음
+							: main process 가 종료되면 컨테이너도 종료됨 
+						: Nginx 와 같은 서버는 기본적으로 daemon( 백그라운드 ) 모드 로 실행됨. 
+						
+
+				(3) 이미지 빌드 >> docker image build . -t mynigix01
+					: 걍 django 이미지를 빌드하는 것과 존똑
+
+				(4) 컨테이너 실행 >> docker container run -p 80:80 -d mynginx01
+					: django 컨테이너 실행하는 것과 존똑인데 포트포워딩하는 포트 번호만 좀 다르게 
+					: 웹 브라우저로 127.0.0.1 접속시 성공적으로 실행됨 확인 가능
+
+		
+			: Nginx 컨테이너 내부 설정 파일 확인 
+				(1) 컨테이너 내부 접속>> docker container exec -it nginx컨테이너명 /bin/bash
+				(2) 파일 확인 >> 		
+					1. cd /etc/nginx/conf.d/
+					2. ls >> default.conf 파일 있는것 확인 가능
+					3. cat default.conf >> 뭔 내용있나 확인
+				(3) 컨테이너 내부 접속 빠져나옴 >> exit 
+				(4) 실행중인 컨테이너 모두 정지 >> docker container stop 컨테이너명
+
+		
+
 
 
 
