@@ -98,7 +98,9 @@ tip
 		: 여러 버전의 python 을 설치하고 사용할 수 있게 도와준다		
 
 	: django >> 웹 프레임워크 라이브러리
-	: gunicorn >> 웹 서버 통신 라이브러리
+		: python 기반 웹 프로젝트를 쉽게 만들게해준다
+	: gunicorn >> 웹 서버 통신 라이브러리(WSGI)
+		: django와 같은 프로그램과 nginx같은 웹서버를 중계해준다
 	: psycopg2 >> PostGreSQL 활용을 위한 라이브러리
 	: tree >> 리눅스 시스템서 파일 시스템 구조를 시각적으로 쉽게 보여주는 패키지
 		: sudo apt install tree 로 설치
@@ -268,6 +270,12 @@ YAML YAML Ain't Markup Language
 
 
 
+HTTP Upstream, Downstream  
+	: stream >> 데이터의 흐름
+		: Upstream >> 데이터가 위로 흐른다. 클라이언트 -> 서버의 방향.
+		: Downstream >> 데이터가 아래로 흐른다. 서버 -> 클라이언트의 방향
+
+	: https://westlife0615.tistory.com/265
 
 
 
@@ -475,16 +483,35 @@ django 실행을 위한 네트워크 설정
 
 		 : Nginx, django 연동 후 실행 >> 	
 			: Nginx 컨테이너를 실행 후 gunicorn 을 활용해 Nginx 와 django 를 연동
-			: Nginx >> 가볍고 성능 좋은 web server. 
+			: 엔진엑스 Nginx >> 가볍고 성능 좋은 web server. 
 				: https://phsun102.tistory.com/45
-				: 정적 파일들을 처리하기 위해 사용
-				: Reverse Proxy Server 로 활용됨
-					: 80 번 포트로 들어오는 내용을 3000, 4000 .. .등의 다른 포트로 분산시키기 가능
-				: 비동기 이벤트 구조를 기반으로 동작 (Event-Driven)
-					: 이에 반해 Apache 는 쓰레드/프로세스 기반
+				: 왜 사용
+					1. 정적 파일들을 처리하기 위해 사용
+					2. Reverse Proxy Server 로 활용됨
+						: 80 번 포트로 들어오는 내용을 3000, 4000 .. .등의 다른 포트로 분산시키기 가능
+					3. 비동기 이벤트 구조를 기반으로 동작 (Event-Driven)
+						: 이에 반해 Apache 는 쓰레드/프로세스 기반
+
+					4. ssl 인증 처리 가능
 
 				: 핵심 파일
 					: 설정 파일 >> nginx.conf , default.conf
+						: nginx의 설정 파일 문법 
+							: 사용하는 문법이 spring boot 의 build.gradle 과 비슷해보이긴 해도 build.gradle 과는 다른, nginx 자체적인 문법을 사용한다
+								: build.gradle 은 Groovy 또는 Kotlin 으로 작성됨
+							: 주요 문법 요소
+								1. 블록 block >> 중괄호 { } 를 단위로 정의되며, 가질 수 있는 블록의 이름(?)은 정해져있다( http, server ... )
+									: 일부 블록의 경우 별칭을 사용 가능 
+										ex ) upstream backendgroup1{  ... } 
+										ex ) upstream backendgroup2{  ... } 
+										ex ) upstream backendgroup3{  ... } 
+
+								2. 각 문장의 끝에는 세미콜론을 명시 
+									: 중괄호 다음 명시가 아니라 중괄호 내부의 문장 뒤에 ; 를 명시하는 것
+
+						: nginx.conf VS default.conf >> default.conf 가 서버에 한정된 설정 파일. nginx.conf 가 포괄적인 설정 파일 
+							: nginx.conf 에서 default.conf 를 include 하여 사용가능하므로 되도록 서버관련 설정은 default.conf 로 분리하여 관리하기 용이하게 하자
+
 						: nginx.conf >> nginx 의 기본 설정 파일 
 							: 다음의 내용이 정의됨 
 								error_log >>  nginx의 에러로그가 쌓이는 경로
@@ -496,24 +523,52 @@ django 실행을 위한 네트워크 설정
 								log_format >> 로그 형식을 지정
 								access_log >>  접속 로그가 쌓이는 경로
 								keepalive_timeout >> 클라이언트에서 연결이 유지될 시간을 정의
-						: default.conf >>  nginx.conf를 통해 include된 서버 설정관련 파일. 
-							: default2.conf, default3.conf 등 여러 개의 파일을 추가하여 서버관련 설정을 추가로 만들어 포함시킬 수 있다.
+
+						: default.conf >>  (nginx.conf 의 http 블럭에서 include 하여 사용하는) 서버 설정 파일. 
+							: default2.conf, default3.conf 등 여러 개의 파일을 추가하여 서버관련 설정을 추가로 만들 수 있다.
 							: 다음의 내용이 정의됨 
 								listen >> 해당 포트로 들어오는 요청을 해당 server {} 블록의 내용에 맞게 처리하겠다
 								server_name >> 호스트 이름을 지정
 								error_page >> 요청결과의 http 상태코드가 지정된 http 상태코드와 일치할 경우, 해당 url로 이동
 
 								location /  >> path 가 루트일 때 보여줄 페이지(index)를 지정
+									: nginx 에서 reverse proxy 정의하는 것.. 
+									: 
+									: https://icerabbit.tistory.com/116
+
+								upstream >> nginx 가 받은 요청을 넘길 서버를 정의. 	
+									: 그러니까 nginx 는 로드밸런싱역할도 수행하는데, 트래픽을 받게될 그룹을 정의하는 것.
+										; AWS ELB 로 치면 target group 정의
+									: 이름이 upstream 인 이유는 클라이언트->서버쪽 방향의 트래픽에 대해 정의하는거니까
+									: upstream 블록 내부에는 여러 "서버:포트"들을 정의 가능하고, 정의된 순서대로 라운드 로빈 방식으로 동작하게 된다.
+										: 그러니까 upstream backendgroup1{
+											server www.aaa.com:80;
+											server www.bbb.com:80;
+											server www.ccc.com:80;
+										}
+										와 같이 정의되어있는데 요청이 들어오면 차례대로 www.aaa.com:80, www.bbb.com:80 , www.ccc.com:80 로 트래픽을 분산시킨다
+
+									: 로드밸런싱 가중치를 의미하는 weight 를 줄 수도, 안 줄 수도 있다
+										: 1~10 정도의 값 주는 듯
+									: backup을 표시하면 백업 전용 서버로 추가 가능 
+										: 그러니까 앞에 정의된 모든 서버가 다운된 경우에만 트래픽을 받는 서버를 등록 가능
+										ex) server www.ccc.com:80 backup; 과 같이 걍 뒤에 backup 이라는 단어만 추가하면 됨
 
 
+									: 형식 
+										upstream 업스트림그룹별칭{
+											server 서버IP1:포트1 weight=값1;
+											server 서버IP2:포트2 weight=값2;
+											.
+											.
+											.
 
-			: gunicorn Green Unicorn>> WSGI 중 하나로, python 웹 어플리케이션의 높은 트래픽을 쉽게 처리할 수 있는 가볍고 안정적인 서버
-				: Django, Flask 등등의 파이썬 웹프레임워크랑 같이 사용되는 기술
-				: WSGI WebSever Gateway Interface >> 파이썬 애플리케이션이 웹서버와 통신하기 위한 인터페이스
-					: 대표적으로 gunicorn 과 uWSGI 가 있다
-					: 왜 쓰는가? >> Django 나 Flask 자체적인 웹 서버는 보안/성능적으로 좋지 않아 배포에는 적합하지 않아 배포 시에는 따로 서버를 구현하고, 이를 gunicorn 으로 연결해 사용하게 됨
+										}
 
-				: https://velog.io/@ggydo59/gnuicorn-gunicorn%EC%9D%B4%EB%9E%80-%EC%99%9C-%ED%95%84%EC%9A%94%ED%95%A0%EA%B9%8C
+									: https://velog.io/@odh0112/Nginx-HTTP-%EB%A1%9C%EB%93%9C-%EB%B0%B8%EB%9F%B0%EC%8B%B1
+									
+
+
 
 			: Nginx 컨테이너 배포(=설정 및 생성) 절차 
 				(1) 디렉터리 정리 >> Nginx 전용 디렉터리를 새로 생성 
@@ -548,8 +603,57 @@ django 실행을 위한 네트워크 설정
 				(3) 컨테이너 내부 접속 빠져나옴 >> exit 
 				(4) 실행중인 컨테이너 모두 정지 >> docker container stop 컨테이너명
 
-		
+
+
+			: 구니콘 gunicorn Green Unicorn>> WSGI 중 하나로, python 웹 어플리케이션의 높은 트래픽을 쉽게 처리할 수 있는 가볍고 안정적인 서버
+				: Django, Flask 등등의 파이썬 웹프레임워크랑 같이 사용되는 기술
+				: WSGI WebSever Gateway Interface >> 파이썬 애플리케이션이 웹서버와 통신하기 위한 인터페이스
+					: 대표적으로 gunicorn 과 uWSGI 가 있다
+					: 왜 쓰는가? >> Django 나 Flask 자체적인 웹 서버는 보안/성능적으로 좋지 않아 배포에는 적합하지 않아 배포 시에는 따로 서버를 구현하고, 이를 gunicorn 으로 연결해 사용하게 됨
+
+				: https://velog.io/@ggydo59/gnuicorn-gunicorn%EC%9D%B4%EB%9E%80-%EC%99%9C-%ED%95%84%EC%9A%94%ED%95%A0%EA%B9%8C
+
+			: 구니콘을 통한 연동 절차 << gunicorn 으로 앞서 생성한 django 프로젝트와 nginx 를 연동. 앞서 생성한 django 이미지를 수정.
+				(1) django 디렉터리 정리 >> 앞서 생성한 프로젝트의 원본을 유지하면서 새 프로젝트를 생성하기 위해 새 폴더 파고 거기에 복사하여 진행
+					1.  (work/ch05 아래에) 썡 새 디렉터리인 ex05를 정의 >> mkdir ex05 
+					2. django실습디렉터리(ex03)를 ex05로 복사>> cp -r ex03 ex05 
+						: -r 옵션 >> (단순 파일수준이아닌) 디렉터리 수준으로 복사
+							: recursive 의 약자.
+						
+					3. 복사한 디렉터리명을 (가독성 높이기위해) 수정 >>  mv ex03 myDjango02
+
+					4.  django 프로젝트 수정
+						(1) 설치파일목록(requirements.txt) 에 구니콘 추가>> vim requirements.txt  하고 젤 끝에 gunicorn 20.1.0 추가
+						(2) Dockerfile 의 CMD문 수정 >> vim Dockerfile 하고 기존 CMD문 (python manage.py runserver 0.0.0.0:8000) 삭제 후  gunicorn --bind 0.0.0.0:8000 myapp.wsgi:application 을 추가
 
 
 
+				(2) 수정한 django 이미지 빌드 >>  docker image build . -t myweb02
 
+
+				(3) Nginx 디렉터리 정리 >> 마찬가지로 앞서 생성한 프로젝트의 원본을 유지하면서 새 프로젝트를 생성하기 위해 새 폴더 파고 거기에 복사하여 진행
+					1.   Nginx실습디렉터리(ex04)를 (앞서 생성한 디렉터리인)ex05로 복사>> cp -r ex04 ex05 
+						
+					2. 복사한 디렉터리명을 (가독성 높이기위해) 수정 >>  mv ex04 myNginx02
+
+					3. Nginx 프로젝트 수정
+						(1) 다음을 내용으로하는 defalut.conf 추가 >> myNginx02 아래에서 바로 vim default.conf
+							: 80번 포트로 받은 요청을 djangotest 라는 이름의 컨테이너의 80번 포트로 전달하겠다
+							: https://mangkyu.tistory.com/294
+
+							upstream myweb{
+							    server djangotest:8000;
+							}
+
+							server{
+							    listen 80;
+							    server_name localhost;
+							    location /{
+							        proxy_pass http://myweb;
+							    }
+							}
+
+
+
+				(4) Nginx 이미지 빌드
+				(5) 컨테이너 실행
