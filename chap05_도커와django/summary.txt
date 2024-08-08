@@ -101,7 +101,10 @@ tip
 		: python 기반 웹 프로젝트를 쉽게 만들게해준다
 	: gunicorn >> 웹 서버 통신 라이브러리(WSGI)
 		: django와 같은 프로그램과 nginx같은 웹서버를 중계해준다
-	: psycopg2 >> PostGreSQL 활용을 위한 라이브러리
+	: psycopg2 > PostgreSQL 을  python에서 사용할 수 있게 해주는 데이터베이스 어댑터 라이브러리
+		: django 와 같은 프로젝트에서 PostgreSQL 을 사용할 수 있게 해준다
+		: 그러니까 JDBC 랑 비슷한 얘임. 근데 환경이 자바가 아니라 파이썬인것.
+
 	: tree >> 리눅스 시스템서 파일 시스템 구조를 시각적으로 쉽게 보여주는 패키지
 		: sudo apt install tree 로 설치
 		: "tree 경로" 로 , 해당 경로 이하의 디렉터리 구조 파악 가능
@@ -279,6 +282,12 @@ HTTP Upstream, Downstream
 
 
 
+docker container ps 와 docker container ls 
+	: 둘이 기능이 완전 같다. 현재 실행중인 컨테이너의 목록을 보여준다.
+	: ps 는 Proccess Status 의 약자.
+
+
+
 
 django 실행을 위한 네트워크 설정 
 	: 포트포워딩을 통해 호스트PC(=가상머신과 puTTy 등이 올라가는 실제물리적컴퓨터 !=puTTy)에서, "도커호스트IP" 와 "특정포트" 조합으로, 도커호스트(=가상머신)의 특정 프로세스에 접근 가능하게 함
@@ -338,6 +347,36 @@ django 실행을 위한 네트워크 설정
 
 
 					
+				3. 외부 db를 반영 >> python manage.py inspectdb 
+					: inspectdb 라는 파일이나 디렉터리가 따로 있는건 아니고 얘도 sub 명령어 중에 하나이다
+					: 실제 db를 만들지 않고 외부 db를 가져와 model 로 만들어주는 편리한 기능
+					: 그냥 띡 쓴다고 써지는게 아니라, settings.py 에 해당 외부 db에 대한 정보를 저장해놔야된다
+
+										: DATABASE 관련 설정 설명
+											(1) ENGINE >> 해당 프로젝트가 어떤 종류의 db (엔진)사용할건지 지정 
+												: postgreSQL , mysql , SQLite 등의 db 사용 가능
+											(2) NAME >> 데이터베이스의 이름
+												: db 스키마가 아니라, mySQL 접속하면 선택하게 되는 그런 얘들(클릭하면 username이랑 password 입력해야하고, 일치하면 여러 db스키마 쫘라락 나오는 얘들) 말하는거임
+											(3) USER >> 데이터베이스에 접속 가능한 사용자 이름. 
+											(4) PASSWORD >> 해당 사용자(USER)로 접속시 사용하는 비밀번호
+											(5) HOST >> 데이터베이스 서버의 호스트 이름 혹은 IP주소
+
+												데이터베이스가 로컬에 있는 경우(로컬 개발 환경) >>  HOST를 해당 localhost로 설정 
+												데이터 베이스 서버가 별도로 있는 경우(데이터베이스가 로컬이 아닌 경우)>>  HOST를 해당 서버의 hostname 이나 IP주소로 설정 
+
+
+
+											(6) PORT >> 데이터베이스 서버의 포트 번호
+												: 5432 는 postgreSQL 의 기본 포트 번호
+
+
+
+
+
+					: https://genius-project.postach.io/post/django-djangoyi-inspectdbeul-iyonghae-oebu-dbe-daehae-ormreul-sseoboja
+
+
+				
 
 
 		 : django 프로젝트 실행 >> python mange.py runserver [IP주소:포트번호]
@@ -640,6 +679,7 @@ django 실행을 위한 네트워크 설정
 					1. cd /etc/nginx/conf.d/
 					2. ls >> default.conf 파일 있는것 확인 가능
 					3. cat default.conf >> 뭔 내용있나 확인
+
 				(3) 컨테이너 내부 접속 빠져나옴 >> exit 
 				(4) 실행중인 컨테이너 모두 정지 >> docker container stop 컨테이너명
 
@@ -771,4 +811,227 @@ EOF
 
 
 						(3) 127.0.0.1:80 접속해보기 >> 잘 됨
+
+
+
+					5.5 Nginx, django, PostgreSQL 컨테이너 연동
+						: 웹프로젝트인 django 에 Nginx (웹서버)뿐 아니라 PostgreSQL(데이터베이스인 )까지 연동하는것
+						: 도커볼륨와 PostgreSQL 복습 >> 
+							도커 볼륨 >> 도커 스토리지의 종류 중 하나로, 도커를 활용해 볼륨을 생성한 후 컨테이너의 디렉터리를 공유하는 방식
+								: 도커 스토리지 >>영구적으로든, 일시적으로든 도커 컨테이너의 데이터를 호스트에 저장하기 위한 방식.
+									: (별다른 처리해주지 않으면) 도커 컨테이너 내부서 생성된 데이터가 호스트에 별도로 저장되진 않는다. 그리고 도커 컨테이너를 삭제하면, 해당 컨테이너 내부의 파일도 함께 사라진다. 
+
+
+									: 변경사항이 반영되는 방향은  "컨테이너 <--> 호스트" 양방향이고, 별도로 commit 이나 save 같은거 없이 즉각적으로 일어난다 (호스트쪽에서 컨테이너와 연동된 폴더에 수정을 가하면 컨테이너의 해당 폴더와 연동된 폴더에도 수정이 가해진다.)
+
+								: 도커 볼륨 생성 방법 >> docker volume create 볼륨명
+								: 도커 볼륨 확인
+									: 생성된 도커 볼륨 목록 확인 >> docker volume ls
+									: 생성된 도커 볼륨의 상세 정보 확인 >> docker inspect 볼륨명
+									: "MountPoint" >>  호스트 상에 도커 볼륨이 저장되있는 위치
+										: 참고로, 해당 위치는 루트 권한 디렉터리라, 걍 cd 하면 안되고, sudo -i 로 루트 셸 전환한 다음에 cd 해야된다.
+														
+								: 생성된 도커 볼륨을 컨테이너에 연동시키기 >>  docker container run 으로 컨테이너 생성할 때, 스토리지에 대한 추가적인 옵션을 명시한다 ( 끝에 [이미지명] 앞 부분 에 명시해줌 된다 )
+											sol1 --mount 옵션명 사용 >> --mount type=volume,source=[도커볼륨명],target=[컨테이너내부경로] 
+												: 명령어에 ','가 들어가는건 --mount 옵션이 세개의 인자 type 과 source 과 target을 필요로 하는거라 그렇고, 쉼표를 사용하는 경우 중간에 띄어쓰기 안둘어가는거 주의
+												: target 으로 명시된 컨테이너 "내부" 경로에 존재하는 모든 데이터들이, source로 명시된 도커 볼륨에 보관된다.
+													: target 으로 명시 가능한 대상이 정해진건 아니고, 저장하고 싶은 위치를 걍 지정하면 된다. 
+
+											sol2 -v (--volume) 옵션명 사용 : 축약형느낌이다 >> -v [도커볼륨명:/컨테이너내부경로]
+
+
+
+							PostgreSQL : 데이터베이스의 한 종류
+								: 이 이미지로 만든 컨테이너가, 데이터베이스가 저장되는 서버가 된다고 봄 된다.
+								: 어쨌뜬 실습해보면 알 수 있는 사실 
+									: 단순 stop시켰던 컨테이너를 재실행 시켰을 때 >> 해당 컨테이너에 이전 작업 내용이 잘 저장되있음
+									: 아예 컨테이너를 삭제 후 새로운 컨테이너를 생성 >> 뭐 ㅈㄴ 당연하지만 새로운 컨테이너엔, 삭제된 컨테이너상의 작업 내용이 들어있지 않다.
+
+								: 명령어
+									: psql 명령어를 제외한 모든 db 쿼리스러운 명령어(?)는 ";"로 끝나야된다
+										: 안그럼 엔터쳐도 해당 문장이 다 안끝났다고 인식한다
+
+									: 기본명령어 >> psql
+										:  로컬 postgreSQL에 접속 >> psql -U postgres
+											: 이전에 docker exec -it PostgreSQL [컨테이너명] /bin/bash 로 필수적으로 컨테이너 내부에 먼저 접속하고서,  postgreSQL에 접속해야된다.
+												: 왜그런지 몰라도 컨테이너 내부 접속 만드로는 테이블 생성같은거 못하게 되어있고, 한단계 더 나아가 위의 psql -U postgres 처럼 postgreSQL 에 접속하는 별도의 절차를 거쳐야된다.
+											: 성공적으로 접속되면 프롬프트 창이 "root@컨테이너ID" 에서 "postgres=#"로 바뀐다.
+											: 원격 접속 위해선  psql -h {호스트명} -p {포트 번호} -U {사용자명} -d {데이터베이스명} 처럼 명시.  로컬에 있는 postgreSQL 서버는 호스트명, 							포트번호를 생략 가능하고, 사용자명과 db명이 같으면 db명도 생략 가능
+				: 왜그런지 몰라도 postgreSQL에서 빠져나갈때는 psql 명령어 없이 "\q" 만 쓴다.
+
+									: 사용자. ROLE 생성 >> CREATE USER [사용자명] PASSWORD ['비번'] [권한];
+										: 권한으로는 SUPERUSER 등 가능
+										: "비밀번호" "생성"할때만 명령문에 "' 를 명시하고, 이외의 경우(권한명, db명, 사용자명... )에는 " 를 명시 안함 주의
+
+									: DATABASE 생성 >> CREATE DATABASE [db명] OWNER [사용자명];
+										: 스키마 생성하는거라고 봄 된다.
+
+									: 생성한 DATABASE 에 접속 >>\c [db명] [사용자명]
+										: 앞에 \c 명시해야되는거 주의!
+										: 해당 DATABASE 에 접속 성공하면 프롬프트창이 "postgres=#"에서 "DB명=#" 으로 바뀐다.
+										: 해당 DB에 접속을 해야 테이블을 만들기 등 할 수 있다
+
+									: 테이블 생성 >> CREATE TABLE 테이블명(
+												컬럼명1 자료형 ,
+												컬럼명2 자료형,
+												. . . 		
+												);	
+										: ";" 전에는 한 줄로 인식되므로 가독성을 위해 맘껏 엔터 쳐도 된다
+										: PK 에는 자료형 뒤 PRIMARY KEY 라고 명시해줌 된다
+
+									: 테이블 목록 확인 >> \dt
+									: 테이블에 데이터 삽입 >> INSERT INTO [테이블명] (컬럼명1, 컬럼명2) VALUES (값1, 값2);
+									: 테이블의 데이터 조회 >> SELECT * FROM [테이블명];
+									: postgreSQL에서 빠져나가기 >> \q
+
+								: 참고 >> 컨테이너 생성시 일반적인 command 와는 다르게 /bin/bash 가 아닌 'docker-entrypoint.s.. ' 이런식으로 설정되는데 정상이니까 걱정 ㄴㄴ
+
+
+
+				      1. postgreSQL 컨테이너 생성
+						(1) 디렉터리 정리 >> 이번 실습 전용 디렉터리 ex06 생성
+							1. mkdir ex06
+						
+						(2) Dockerfile 작성 >> vim Dockerfile 을 하고, 아래의 내용으로 작성
+							FROM postgres:15.4
+								: FROM 명령어로 베이스 이미지만 설정해줌
+ 
+						(3) 이미지 빌드(생성) >> docker image build . -t mypostgres03
+							: 앞서 생성한 Dockerfile 로 이미지(mypostgres03) 빌드
+
+						(4) 컨테이너 실행 >> 
+							1. 도커 볼륨(myvolume)을 생성  >> docker volume create myvolume03
+								: 컨테이너와 연동하여 데이터를 영구 저장할 저장소인볼륨은 컨테이너 생성당시 옵션으로 연동되어지기 때문에 컨테이너 생성 이전에 별도로 만들어야된다
+
+							2.  도커 볼륨을 연동하면서 postgreSQL 컨테이너 생성 >> docker container run -e POSTGRES_PASSWORD=mysecretpassword --mount type=volume, source=myvolume03, target=/var/lib/postgresql/data -d mypostgres03
+								: -e 옵션>> 환경변수에 대한 것
+									POSTGRES_PASSWORD >> 비번 지정
+ 
+								: --mount 옵션 >> volume 에 대한 것
+									:  type=volume 으로 볼륨을 사용할것임을명시하고, source 로 특정 볼륨을 지정하고, target 으로 컨테이너 내부의 특정경로를 명시함으로써 어디의 데이터를 영구 지정할건지 특정한다
+ 
+
+
+				      2. Nginx, Django, postgreSQL 컨테이너 연동
+					     : 구현하고자 하는 것 >> 
+						1. 웹 브라우저로 127.0.0.1:80 에 접속
+						2. 포트포워딩 통해 10.2.2.4:80(도커호스트의 80번 포트)으로 트래픽을 전달 
+						3. 도커호스트에 유입된 트래픽을 nginxtest 컨테이너의 80번 포트로 전달
+						4. nginxtest 컨테이너에 유입된 트래픽을 djangotest 컨테이너의 8000번 포트로 전달
+					 
+						5. django 컨테이너가 유입된 트래픽(request)따라 작업하면서, db 쓸 일 있으면 postgresql 컨테이너의 5432 포트를 통해 접속해 작업 수행
+
+						6. postgresql 컨테이너에서 수행된 작업이 연동된 볼륨에 반영됨
+
+
+					     : 절차
+						(1) 이전 작업물 복사 , 수정 , 이미지 새로 빌드
+							1. cp -r ex05 ex07
+								: 이번 실습을 위한 디렉터리 ex07 생성 및 ex05( 구니콘으로 Nginx 와 Django 연동시켜둔 디렉터리 ) 를 그대로 복사함
+								
+							2. cp -r ex06 ex07
+								: 앞서 생성된 디렉터리 ex07 에 ex06(postgres 컨테이너 정의된 디렉터리 )도 그대로 복사함
+
+
+							3. 복사한 디렉터리 이름 변경 
+							     : 최종적으로는 ex07 에 myDjango03, myNginx03, myPostgres03 이 남아있어야됨
+								(1) mv ex05/myDjango02 myDjango03
+								(2) mv ex05/myNginx myNginx03
+								(3) mv ex06 myPostgres03
+								(4) rm -rf ex05 >> 껍데기만 남은 ex05는 걍 삭제
+
+
+
+							4. 복사한거 이번 실습에 맞게 내용 수정 및 이미지 빌드 
+								(1) django 디렉터리 수정 및 이미지 빌드 
+									1. (myapp/myapp 의) settings.py 의 DATABASE 부분을 아래와 같이 수정
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'postgres',
+        'USER': 'postgres',
+        'PASSWORD': 'mysecretpassword',
+        'HOST': 'postgrestest',
+        'PORT':5432,
+    }
+}
+
+
+										: DATABASE 관련 설정 설명
+											(1) ENGINE >> 해당 프로젝트가 어떤 종류의 db (엔진)사용할건지 지정 
+												: postgreSQL , mysql , SQLite 등의 db 사용 가능
+											(2) NAME >> 데이터베이스의 이름
+												: db 스키마가 아니라, mySQL 접속하면 선택하게 되는 그런 얘들(클릭하면 username이랑 password 입력해야하고, 일치하면 여러 db스키마 쫘라락 나오는 얘들) 말하는거임
+											(3) USER >> 데이터베이스에 접속 가능한 사용자 이름. 
+											(4) PASSWORD >> 해당 사용자(USER)로 접속시 사용하는 비밀번호
+											(5) HOST >> 데이터베이스 서버의 호스트 이름 혹은 IP주소
+
+												데이터베이스가 로컬에 있는 경우(로컬 개발 환경) >>  HOST를 해당 localhost로 설정 
+												데이터 베이스 서버가 별도로 있는 경우(데이터베이스가 로컬이 아닌 경우)>>  HOST를 해당 서버의 hostname 이나 IP주소로 설정 
+
+
+
+											(6) PORT >> 데이터베이스 서버의 포트 번호
+												: 5432 는 postgreSQL 의 기본 포트 번호
+
+
+
+
+
+									2. requirements.txt 수정
+										(1)  부모디렉터리의 부모디렉터리로 이동. 그러니까 한번에 두번 점프 (지금 myapp/myapp 에 있으니까) >> cd ../.. 
+										(2) requirements.txt 수정 >> vim requirenebts.txt 하고 젤 끝에 psycopg2==2.9.9 추가
+											: psycopg2 >> python 에서 postgreSQL 을 사용하기 위한 라이브러리
+			 
+
+									3. Dockerfile 수정 >> 이번 실습에서는 Dockerfile 에 대한 별도 수정 없이 그냥 진행
+										: 참고 >> 기존내용은 아래와 같음
+											FROM python:3.11.6
+
+											WORKDIR /usr/src/app
+
+											COPY . .
+
+											RUN python -m pip install --upgrade pip
+											RUN pip install -r requirements.txt
+
+											WORKDIR ./myapp
+											CMD gunicorn --bind 0.0.0.0:8000 myapp.wsgi:application
+											EXPOSE 8000
+
+									4. 이미지 빌드 >> docker image build . -t myweb03
+
+
+
+								(2) nginx  디렉터리 수정 및 이미지 빌드 
+									1. nginx 디렉터리엔 별도로 수정가한 것 없음 
+									2. 걍 새로 이미지 빌드함 >> docker image build . -t mynginx03
+
+
+						(2)  이번 실습을 위한 네트워크 생성 >> docker network create mynetwork03
+
+						(3)  새로 생성한 네트워크 상에서, 새로 생성한 이미지를 바탕으로 새로운 컨테이너 생성
+							1. 새로 생성한 네트워크 상에서 새로 postgresql 컨테이너 생성 >> docker container run --name postgrestest --network mynetwork03 -e POSTGRES_PASSWORD=mysecretpassword --mount type=volume,source=myvolume03,target=/var/lib/postgresql/data -d mypostgres03
+								: 앞서 네트워크 지정해준 것 빼고는 postgresql 컨테이너 생성할 때와 크게 달라진건 없음.
+
+
+							2. 새로 생성한 네트워크 상에서 새로 django 컨테이너 생성 >> 
+								1. 기존에 생성했던 django 컨테이너 삭제 ( 이전에 생성했던djangotest 컨테이너가 더이상 딱히 필요없기도한데, 이번 실습에서 djangotest 라는 이름으로 컨테이너 생성할거라서 삭제해주는거임) >>  docker container rm djangoteset
+								2. 새로 생성한 네트워크 상에서 , 새로 생성한 이미지인 myweb03 이미지로,  ( djangotest 라는 이름으로) django 컨테이너 생성 >> docker container run --name djangotest --network mynetwork03  myweb03
+
+							3. 새로 생성한 네트워크 상에서 새로 nginx 컨테이너 생성 >> docker container run --name nginxtest --network mynetwork03 -p 80:80 mynginx03
+								: 이전에 nginx 컨테이너 생성했을 떄와 마찬가지로 왜 그런진 모르겠는데 default.conf 가 복사되있지가 않아서 직접 접속후에 default.conf 작성하고 reload 해줬음
+
+							4. 접속 테스트 >> 웹 브라우저로 127.0.0.1:80 접속 
+								: 잘 되야 정상인거임
+
+
+						(4) django 
+							1. django 컨테이너에 접속 >> docker container exec -it djangotest /bin/bash 
+							2. 디렉터리 목록 보기 >> ls
+								: db.sqlite3, manage.py, myapp 의 디렉터리 확인 가능
+
+							3. 
+
 
