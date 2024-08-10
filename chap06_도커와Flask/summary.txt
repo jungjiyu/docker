@@ -1,1 +1,128 @@
+도커를 활용한 Flask 실행
+	: 5장과 전체적으로 비슷하지만 django 가 아닌 flask 를 활용하여 웹 서비스를 실행
+
+-------------------------------------------------------------------------------------------------
+
+자주 까먹는거 정리
+	: 가상환경 관련
+		1. 가상환경 실행 >> pyenv activate 가상환경명
+		2. 가상환경 종료 >> source deactivate
+
+	: 파이썬 관련
+		1. 파이썬 실행 >> python
+		2. 파이썬 종료 >> quit()
+
+	: 디렉터리 복사할 때
+		: mkdir dirB 하고 cp -r dirA dirB >> dirB가 생성되고, dirB 내부에 dirA 디렉터리 자체가 복사됨
+		: mkdir dirB 없이 cp -r dirA dirB >> dirB가 자동생성되고, dirB 내부에는 dirA의 하위 내용물이 복사됨
+
+Flask 라이브러리 >> (Django 같은) 파이썬 기반 웹 프레임워크
+	: 설치
+		1. 가상환경 실행 >> pyenv activate py3_11_6
+		2. 설치 >> pip install flask
+
+	: 버전 확인 (설치 제대로 됬나 확인)
+		1. (falsk 를 설치한 가상환경에서) python 실행 >> python
+		2. flask 라이브러리 불러오기 >> import flask
+		3. version 라이브러리 불러오기>>   from importlib.metadata import version
+		4. 버전 찍어보기 >> version('flask')
+		5. python 종료 >> quit()
+		6. 가상환경 종료 >> source deactivate
+
+
+	: Flask 실습을 위한 네트워크 설정 >> 포트포워딩 추가
+		1. 버추얼박스의 네트워크 탭에서 아래의 rule 을 추가 (rule4, rule5 생성)
+			rule4 >> 외부 네트워크(브라우저 등)에서 호스트(버츄얼박스가설치된실제내컴퓨터)의 포트 8001로 들어오는 모든 TCP 트래픽은 IP 주소가 10.0.2.4인 특정 가상 머신(게스트)의 포트 8001로 전달
+				프로토콜: TCP,
+				호스트포트: 8001,
+				호스트IP: 빈 칸(=모든IP허용),
+				게스트IP : 10.0.2.4,
+				게스트포트: 8001 
+
+			rule5 >> 외부 네트워크(브라우저 등)에서 호스트(버츄얼박스가설치된실제내컴퓨터)의 포트 81로 들어오는 모든 TCP 트래픽은 IP 주소가 10.0.2.4인 특정 가상 머신(게스트)의  포트 81로 전달
+				프로토콜: TCP,
+				호스트포트: 81,
+				호스트IP: 빈 칸(=모든IP허용),
+				게스트IP : 10.0.2.4,
+				게스트포트: 81 
+
+	: 기본적인 Flask 웹 프로젝트 작성 및 실행해보기
+		(1) 일단 이번 실습 전용 디렉터리 구성
+			1. ch06 디렉터리 생성
+			2. ch06 내부에 ex01 디렉터리 생성
+			3. ex01 내부에 myapp 디렉터리 생성
+
+		(2) main.py 작성
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route('/')
+def hello_world():
+    return 'hello world!'
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8001)
+
+		    : 해석
+			: Flask 라이브러리 불러오기 >> from flask import Flask
+			: flask 웹 애플리케이션 객체의 별칭을 (app으로) 지정 >> app = Flask(__name__)
+			: @app.route('/') >> 루트 경로 접근 시
+			: if __name__ == '__main__': >> 파이썬 스크립트가 실행되면
+			: app.run >> 웹 애플리케이션을 실행
+				: host='0.0.0.0', port=8001>> 모든IP주소로부터 요청을 수락하고 8001번 포트를 사용하겠다
+
+
+		(3) main.py를 가상환경에서 실행하고 접속
+			: 가상환경에서 실행해야하는건 가상환경에 python 이랑 flask 랑 다 설치해논 상태니까
+			1. 가상환경 실행 >> pyenv activate py3_11_6
+			2. main.py 실행(= Flask 서버 실행) >> python main.py
+			3. 웹 브라우저로 접속해보기 >> 127.0.0.1:8001 로 접속하면 화면에 'hello world!' 뜸
+				: 터미널에 로그도 찍힘 (10.0.2.2 - - [10/Aug/2024 06:34:49] "GET / HTTP/1.1" 200 - )
+			4. 서버 종료 >> CTRL + C
+
+			
+	: Nginx, Flask 연동 후 실행 
+		: Flask 도 Django 와 마찬가지로 자체 서버를 이용하기보다는 (Flask 로는 코드만 작성하고) 서버는 Nginx를 이용하는 편
+			: Flask 도 Django 와 마찬가지로 Nginx를 사용할 때는 Flask 쪽의 컨테이너쪽에 gunicorn 라이브러리 활용
+
+		: 앞선 실습에서는 도커 호스트에서 Flask 서비스를 실행했다면, 이번에는 컨테이너 형태로 Flask 서비스를 실행
+		1. 디렉터리 정리
+			(1) ex02 새로 만들기 >> mkdir ex02
+			(2) ex01 을 ex02 로 복사하기 >> cp -r ex01 ex02
+			(3) 복사된 ex01 의 파일명 변경하기 >> mv ex01 myFlask02
+
+		2. requirements.txt 작성(필요한 라이브러리 정보 작성)
+		    : (myFlask02 에) 아래의 내용으로 작성 >> flask 와 gunicorn 을 다운
+			flask==3.0.0
+			gunicorn==20.1.0
+			
+		3. Dockerfile 작성
+		    : (myFlask02 에) 아래의 내용으로 작성 >> 전반적으로 Django 의 Dockerfile 과 비슷한데 포트번호를 8001로 함
+			FROM python:3.11.6
+
+			WORKDIR /usr/src/app
+
+			COPY . .
+
+			RUN python -m pip install --upgrade pip
+			RUN pip install -r requirements.txt
+
+			WORKDIR ./myapp
+
+			CMD gunicorn --bind 0.0.0.0:8001 main:app
+
+			EXPOSE 8001
+
+		4. Flask 이미지 빌드 >> docker image build . -t myflask02
+
+
+			
+
+
+
+
+
+
+
 
