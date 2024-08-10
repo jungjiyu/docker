@@ -256,7 +256,9 @@ YAML YAML Ain't Markup Language
 		: 두 개의 기능상 차이는 없음
 
 	: 문법 >> 
-		: 기본적으로 파이썬의 딕셔너리 자료형처럼 key:value 꼴
+		: 기본적으로 파이썬의 딕셔너리 자료형처럼 key: value 꼴
+			: key 의 ":" 다음 꼭 띄어쓰기 한 칸 하고 value 작성해줘야됨
+		: 들여쓰기는 띄어쓰기 2칸 혹은 4칸을 지원 (보통 2칸 사용)
 		: - >> 한 요소의 시작을 나타냄. ( 그러니까 -key : value 는 사실상 ..., {key: value}, ...  라는 거임 )
 			: - 로시작하지 않는 줄은 (기존 요소의) 다음 요소로 추가됨. ( 그러니까 key : value 는 걍 ..., key: value, ...  라는 거임 )
 
@@ -1249,12 +1251,161 @@ DATABASES = {
 			AWS cloudformation 의 template 은 AWS 의 인프라 자원 관리를 효과적으로하게 해줌
 			Docker 의 Dockercompose 는 Docker 의 인프라 자원 관리를 효과적으로 하게 해줌
 
-		: 컨테이너의 생성 + 실행 ? 아님 생성 only? 아님 실행 only?
+		: 컨테이너의 생성 + 실행 
+		: docker-compose.yml 의 형식
+			: 항목 따라서 "-"가 있기도 하고 없기도 한데, "-"가 쓰인 것은 여러 값을 나열할 수 있게 함이다("-"가 안쓰인 건 해당 항목이 값을 여러개 나열할 필요없고 값을 하나만 가져서 그런거임 ). 항목자체에 "-"를 가지도록/안가지도록 설정된거라, ("-"를 표기하도록 설정된 항목은 )아무리  실제로는 값이 1개만 있어도 "-"빼지말고 "-"를 쓰는게 좋다고 한다. 
+				: ex ) 여러개 입력
+					ports:
+					  - "80:80"
+					  - "8000:8000"
+
+				: ex ) 하나만 입력
+					ports:
+					  - "80:80"
+
+
+
+			: 기본적인 docker-compose.yml 구성 및 해석  
+				version >> 컴포즈 파일의 포맷 버전 정의
+					: 컴포즈 파일의 포맷 버전은 크게 1,2,3 이 있다
+						
+				services >> 서비스 목록에 대해 정의
+					: 바로 하위에 적는 djangotest , nginxtest, postgrestest 등 >> 생성할 서비스(컨테이너) 각각의 이름
+						서비스명 아래의 build >> 해당 서비스의 바탕이될 이미지를 빌드할 경로 명시
+						서비스명 아래의 networks >> 해당 서비스가 사용할 도커 네트워크 정보 입력
+						서비스명 아래의 depens_on >> 컨테이너 실행 순서를 정할 때 사용
+							: 서비스A가 적혀있음 서비스A의 컨테이너를 먼저 실행(생성)시킨후 해당 서비스의 컨테이너를 실행시킨다
+
+						서비스명 아래의 ports >> 포트포워딩정보입력
+							: "<도커호스트포트>:<컨테이너포트>" 의 꼴로 요소로 입렫
+												
+
+						서비스명 아래의 enviornments >> 환경변수입력
+						서비스명 아래의 volumes >> 사용할 도커 볼륨 정보입력
+							: "<도커볼륨명>:마운트할컨테이너내부경로" 의 값을 요소의 형태로 입력
+						서비스명 아래의 restart >> 
+							: 값으로 "always"를 준 것 == 컨테이너가 정지되면 재실행하라					
+
+				networks >> 네트워크 정의
+					: 바로 하위에 적은 composenet01 >> 생성할 네트워크명
+
+				volume >> 볼륨 정의
+					: 바로 하위에 적은 composevol01 >> 생성할 볼륨명
+				
+
+			: 결론적으로는 
+				: services 따라서 
+					(1) <docker-compose.yml의부모디렉터리명>-yml파일에서정의한서비스명 의 이름으로, yml파일에서명시한build경로의디렉터리를바탕으로 , 이미지가 생성
+					(2) <docker-compose.yml의부모디렉터리명>-yml파일에서정의한서비스명-n 의 이름으로 컨테이너가 생성
+
+				: networks 따라서 >> <docker-compose.yml의부모디렉터리명>_yml파일에서정의한네트워크명 으로 네트워크 생성됨
+					: network 를 생성한다고해서 해당 docker-compose.yml 파일로 생성되는 모든 컨테이너가 해당 네트워크 위에 생성되게 되는게 아님. 이건 걍 생성만 시켜주는거고, 이 생성된 네트워크 위에서 컨테이너가 생성되게 하려면 별도로 services 에서 neworks 로 해당 네트워크를 명시해줘야됨
+				: volume 따라서 >>  <docker-compose.yml의부모디렉터리명>_yml파일에서정의한볼륨명 으로 볼륨 생성됨
+					: 마찬가지로 얘는 volume 을 생성만 시켜주는거지, volume 을 직접적으로 연결시키려면 serivces 의 volume 으로 명시해야됨
+
+
+
 		: 도커 컴포즈 설치  
-			: 왜 그런진 모르겠는데 교재에서처럼 걍 도커호스트에 설치하면 아래와 같은 에러 나서 
-			1. 일단 pip 를 먼저 설치 필요 >> sudo apt install -y python3-pip
-			2. pip로 docker-compose 설치 >> sudo pip3 install docker-compose
-			3. 제대로 설치됬나 확인 >> docker compose version
+			: 교재에서처럼 걍 도커호스트에 설치하면 "
+error: externally-managed-environment"와 같은 에러 나서 gpt 가 알려준대로 독립 실행형 Docker Compose를 설치함
+				: 에러의 원인으로 추측되는 원인들
+					: pip 나 pipx 를 통해 설치를 시도했을 때 에러가 뜨는 에러는 주로 "Python 패키지 의존성" 또는 "빌드 환경 문제"와 관련 있음
+						: docker-compose 패키지는 PyYAML 과 같은 다른 Python 패키지에 의존하고, 이 패키지를 빌드하는 과정에서 문제가 발생함.
+						: python 의 여러 버전이 설치된 시스템에서 발생 가능
+
+				: 교재에서 알려준 설치 방법
+					1. 일단 pip 를 먼저 설치 필요 >> sudo apt install -y python3-pip
+					2. pip로 docker-compose 설치 >> sudo pip3 install docker-compose
+					3. 제대로 설치됬나 확인 >> docker compose version
+
+				: gpt 가 알려준 독립실행형 Dockercompose 설치 >> python 환경과 무관하게 Docker Compose 를 설치하고 실행할 수 있는 독립적인 실행파일을 다운받은 것이라서 그렇다
+					1. sudo curl -L "https://github.com/docker/compose/releases/download/v2.21.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+					2. sudo chmod +x /usr/local/bin/docker-compose
+					3. 정상적으로 설치됬나 확인 >> docker-compose --version
+
+
+	: docker compose를 활용
+		: 절차
+			(1) 디렉터리 정리 : ex07( 컨테이너꼴의 postgresql 과 django , nginx 연동했던 프로젝트 )를 복사하여 ex09 새로 생성 >> cp -r ex07 ex09
+			(2) docker-compose.yml 파일 작성 
+				1. vim docker-compose.yml 하고 아래의 내용을 작성 >> 결론적으로는 이 설정 파일을 바탕으로 "ex09_composenet01" 이라는 네트워크, "ex09_composevol01" 이라는 볼륨, "ex09-djangotest"와  "ex09-nginxtest" 과  "ex09-postgresql" 이라는 이미지, "ex09-djangotest-1"와  "ex09-nginxtest-1" 과  "ex09-postgresql-1" 라는 컨테이너가 생성되게됨
+
+version: "3"
+
+services:
+  djangotest:
+    build: ./myDjango03
+    networks:
+      - composenet01
+    depends_on:
+      - postgrestest
+    restart: always
+
+  nginxtest:
+    build: ./myNginx03
+    networks:
+      - composenet01
+    ports:
+      - "80:80"
+    depends_on:
+      - djangotest
+    restart: always
+
+  postgrestest:
+    build: ./myPostgres03
+    networks:
+      - composenet01
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: postgres
+    volumes:
+      - composevol01:/var/lib/postgresql/data
+    restart: always
+
+networks:
+  composenet01:
+
+volumes:
+  composevol01:
+
+
+			(2) docker-compose.yml 파일을 바탕으로 여러 이미지 빌드 및 컨테이너 실행 >> (docer-compose.yml 파일있는 디렉터리에서) docker compose up -d --build
+				: docker compose up >> YAML 파일이 포함하는 컨테이너를 모두 실행
+				: -d >> 백그라운드 실행
+					: 일반적으로 docker-compose 를 활용하는 경우 -d 를 대부분 명시. 왜냐면 -d 로 백그라운드에서 실행 안시키면 현재 터미널에 실행되는 컨테이너의 로그가 출력되고 현재 터미널을 탈출하기만 하면 컨테이너가 정지되니까
+
+				: --build >> 컨테이너의 실행 전에 이미지를 빌드해라
+
+
+			(3) nginx, django 컨테이너 잘 실행되는지 확인 >> 127.0.0.1:80접속 시 정상 접속되면 정상인거임
+			(4) postgresql 컨테이너 잘 실행되는지 확인 
+				1. django 컨테이너 내부 접속 >> docker exec -it ex09-djangotest-1 /bin/bash
+				2. posegresql 제대로 활용 가능한지 확인 >> python mange.py inspectdb
+
+
+			(5) docker-compose 로 실행된 컨테이너 모두 정지 및 삭제 >> docker compose down
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+			
+
+
+
 				
 
 
