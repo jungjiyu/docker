@@ -87,38 +87,126 @@ if __name__ == '__main__':
 			: Flask 도 Django 와 마찬가지로 Nginx를 사용할 때는 Flask 쪽의 컨테이너쪽에 gunicorn 라이브러리 활용
 
 		: 앞선 실습에서는 도커 호스트에서 Flask 서비스를 실행했다면, 이번에는 컨테이너 형태로 Flask 서비스를 실행
+
+
+		1. Flask 이미지 빌드
+			(0) 디렉터리 정리
+				1. ex02 새로 만들기 >> mkdir ex02
+				2. ex01 을 ex02 로 복사하기 >> cp -r ex01 ex02
+				3. 복사된 ex01 의 파일명 변경하기 >> mv ex01 myFlask02
+
+			(1) requirements.txt 작성(필요한 라이브러리 정보 작성)
+		   	     : (myFlask02 에) 아래의 내용으로 작성 >> flask 와 gunicorn 을 다운
+				flask==3.0.0
+				gunicorn==20.1.0
+			
+			(2) Dockerfile 작성
+		    		: (myFlask02 에) 아래의 내용으로 작성 >> 전반적으로 Django 의 Dockerfile 과 비슷한데 포트번호를 8001로 함
+				FROM python:3.11.6
+
+				WORKDIR /usr/src/app
+
+				COPY . .
+
+				RUN python -m pip install --upgrade pip
+				RUN pip install -r requirements.txt
+	
+				WORKDIR ./myapp
+
+				CMD gunicorn --bind 0.0.0.0:8001 main:app
+	
+				EXPOSE 8001
+
+			(3) Flask 이미지 빌드 >> docker image build . -t myflask02
+
+
+		2. Nginx 이미지 빌드
+			(0) 디렉터리 정리 >> myNginx02f 라는 디렉터리 새로 생성 (mkdir myNginx02f )
+				: 뒤에 f는 Flask 를 위한 Nginx 라는 의미에서 붙인거라 함
+
+			(1) default.conf 작성 >> (myNginx02f에서 ) vim default.conf 하고 아래의 내용대로 작성 	
+				:  이 컨테이너로 유입되는 "목적지 IP 가 localhost 이고, 포트 81번으로 들어온 path가 루트인 트래픽" 대해 flasktest:8001 로 라우팅시킨다
+
+
+upstream myweb{
+    server flasktest:8001;
+}
+
+server{
+    listen 81;
+    server_name localhost;
+
+    location /{
+        proxy_pass http://myweb;
+    }
+}
+
+
+			(2) Dockerfile 작성 >> vim Dockerfile 하고 아래와 같이 작성
+
+FROM nginx:1.25.3
+RUN rm /etc/nginx/conf.d/default.conf
+COPY default.conf /etc/nginx/conf.d/
+CMD ["nginx","-g","daemon off;"]
+
+
+			(3) nginx 이미지 빌드 >> docker image build . -t mynginx02f
+
+
+			
+		3. Flask, Nginx 컨테이너 연동 
+			(1) 이번 실습을 위한 네트워크 생성 >> docker network create mynetwork02f
+			(2) 새 네트워크에서 새 이미지로 Flask 컨테이너 실행 >> docker container run -d --name flasktest --network mynetwork02f myflask02
+			(3) 새 네트워크에서 새 이미지로, 81번과 81번 포트포워딩하여 Nginx 컨테이너 실행 >> docker container run -d --name nginxtest --network mynetwork02f -p 81:81 mynginx02f
+			(4) 접속해서 잘 실행됬나 확인 >> 127.0.0.1:81 접속시 hello world 뜨면 잘 된 것
+
+
+
+	: 도커 컴포즈를 활용한 컨테이너 실행
 		1. 디렉터리 정리
-			(1) ex02 새로 만들기 >> mkdir ex02
-			(2) ex01 을 ex02 로 복사하기 >> cp -r ex01 ex02
-			(3) 복사된 ex01 의 파일명 변경하기 >> mv ex01 myFlask02
+			(1) ex02 를 복사해서 ex03 생성 >> cp -r ex02 ex03
+			(2) 내용물 이름 수정 
+				1.  mv myFlask02 myFlask03
+				2.  mv myNginx02f myNginx03f
 
-		2. requirements.txt 작성(필요한 라이브러리 정보 작성)
-		    : (myFlask02 에) 아래의 내용으로 작성 >> flask 와 gunicorn 을 다운
-			flask==3.0.0
-			gunicorn==20.1.0
+		2. docker-compose.yml 작성
+version: "3"
+
+services:
+  flasktest:
+    build: ./myFlask03
+    networks:
+      - composenet03
+    restart: always
+
+  nginxtest:
+    build: ./myNginx03f
+    networks:
+      - composenet03
+    ports:
+      - "81:81"
+    depends_on:
+      - flasktest
+    restart: always
+
+networks:
+  composenet03:
+
+
+		3. docker-compose.yml 로 이미지 빌드 및 컨테이너 실행 >> docker compose up -d --build
+		4. 접속해보기 >> 127.0.0.1:81 접속 시 "hello world" 잘 나옴
+		5. 생성한 자원 한번에 삭제 >> docker compose down
+
+
+
+
+
+
+
+		
+
+
 			
-		3. Dockerfile 작성
-		    : (myFlask02 에) 아래의 내용으로 작성 >> 전반적으로 Django 의 Dockerfile 과 비슷한데 포트번호를 8001로 함
-			FROM python:3.11.6
-
-			WORKDIR /usr/src/app
-
-			COPY . .
-
-			RUN python -m pip install --upgrade pip
-			RUN pip install -r requirements.txt
-
-			WORKDIR ./myapp
-
-			CMD gunicorn --bind 0.0.0.0:8001 main:app
-
-			EXPOSE 8001
-
-		4. Flask 이미지 빌드 >> docker image build . -t myflask02
-
-
-			
-
 
 
 
